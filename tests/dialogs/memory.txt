@@ -1,0 +1,11 @@
+LaunchRequest
+MyColorIsIntent color=red
+BookmarkGetIntent
+BookmarkSetIntent page=12
+BookmarkGetIntent
+ResetIntent
+AMAZON.YesIntent
+LaunchRequest
+BookmarkGetIntent
+# AMAZON.HelpIntent
+AMAZON.StopIntent

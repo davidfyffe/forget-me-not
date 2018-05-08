@@ -1,0 +1,244 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "forget me not",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.YesIntent",
+          "samples": []
+        },
+        {
+          "name": "MyNameIsIntent",
+          "slots": [
+            {
+              "name": "firstname",
+              "type": "AMAZON.US_FIRST_NAME"
+            }
+          ],
+          "samples": [
+            "my name is {firstname}",
+            "call me {firstname}"
+          ]
+        },
+        {
+          "name": "ResetIntent",
+          "slots": [],
+          "samples": [
+            "reset",
+            "reset memory",
+            "clear memory"
+          ]
+        },
+        {
+          "name": "StatusIntent",
+          "slots": [],
+          "samples": [
+            "status",
+            "what is the status",
+            "memory status"
+          ]
+        },
+        {
+          "name": "MyColorIsIntent",
+          "slots": [
+            {
+              "name": "color",
+              "type": "ColorSlotType"
+            }
+          ],
+          "samples": [
+            "my favorite color is {color}"
+          ]
+        },
+        {
+          "name": "VisitIntent",
+          "slots": [
+            {
+              "name": "state",
+              "type": "AMAZON.US_STATE"
+            },
+            {
+              "name": "country",
+              "type": "AMAZON.Country"
+            }
+          ],
+          "samples": [
+            "I visited {country}",
+            "I went to {country}",
+            "I want to visit {country}",
+            "I visited {state}",
+            "I went to {state}",
+            "I want to visit {state}"
+          ]
+        },
+        {
+          "name": "BookmarkSetIntent",
+          "slots": [
+            {
+              "name": "book",
+              "type": "AMAZON.Book"
+            },
+            {
+              "name": "chapter",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "page",
+              "type": "AMAZON.NUMBER",
+              "samples": [
+                "{page}",
+                "page {page}",
+                "i left off on page {page}"
+              ]
+            },
+            {
+              "name": "line",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "set a bookmark for {book} chapter {chapter} page {page} line {line}",
+            "set a bookmark"
+          ]
+        }
+      ],
+      "types": [
+        {
+          "name": "ColorSlotType",
+          "values": [
+            {
+              "id": "brn",
+              "name": {
+                "value": "brown"
+              }
+            },
+            {
+              "id": "blk",
+              "name": {
+                "value": "black"
+              }
+            },
+            {
+              "id": "wht",
+              "name": {
+                "value": "white"
+              }
+            },
+            {
+              "id": "pur",
+              "name": {
+                "value": "purple",
+                "synonyms": [
+                  "violet",
+                  "indigo"
+                ]
+              }
+            },
+            {
+              "id": "orn",
+              "name": {
+                "value": "orange"
+              }
+            },
+            {
+              "id": "yel",
+              "name": {
+                "value": "yellow"
+              }
+            },
+            {
+              "id": "grn",
+              "name": {
+                "value": "green"
+              }
+            },
+            {
+              "id": "blu",
+              "name": {
+                "value": "blue"
+              }
+            },
+            {
+              "id": "red",
+              "name": {
+                "value": "red",
+                "synonyms": [
+                  "scarlet",
+                  "crimson"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "dialog": {
+      "intents": [
+        {
+          "name": "BookmarkSetIntent",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "book",
+              "type": "AMAZON.Book",
+              "confirmationRequired": false,
+              "elicitationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "chapter",
+              "type": "AMAZON.NUMBER",
+              "confirmationRequired": false,
+              "elicitationRequired": false,
+              "prompts": {}
+            },
+            {
+              "name": "page",
+              "type": "AMAZON.NUMBER",
+              "confirmationRequired": false,
+              "elicitationRequired": true,
+              "prompts": {
+                "elicitation": "Elicit.Slot.1298640133108.110887262871"
+              }
+            },
+            {
+              "name": "line",
+              "type": "AMAZON.NUMBER",
+              "confirmationRequired": false,
+              "elicitationRequired": false,
+              "prompts": {}
+            }
+          ]
+        }
+      ]
+    },
+    "prompts": [
+      {
+        "id": "Elicit.Slot.1298640133108.110887262871",
+        "variations": [
+          {
+            "type": "PlainText",
+            "value": "what page"
+          }
+        ]
+      }
+    ]
+  }
+}

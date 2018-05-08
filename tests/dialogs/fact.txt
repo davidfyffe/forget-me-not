@@ -1,0 +1,7 @@
+LaunchRequest
+GetNewFactIntent
+ResetIntent
+AMAZON.YesIntent
+GetNewFactIntent
+GetNewFactIntent
+AMAZON.StopIntent
