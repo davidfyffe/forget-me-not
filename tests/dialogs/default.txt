@@ -1,4 +1,3 @@
 LaunchRequest
-StatusIntent
 AMAZON.HelpIntent
 AMAZON.StopIntent

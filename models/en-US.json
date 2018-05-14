@@ -24,34 +24,12 @@
           "samples": []
         },
         {
-          "name": "MyNameIsIntent",
-          "slots": [
-            {
-              "name": "firstname",
-              "type": "AMAZON.US_FIRST_NAME"
-            }
-          ],
-          "samples": [
-            "my name is {firstname}",
-            "call me {firstname}"
-          ]
-        },
-        {
           "name": "ResetIntent",
           "slots": [],
           "samples": [
             "reset",
             "reset memory",
             "clear memory"
-          ]
-        },
-        {
-          "name": "StatusIntent",
-          "slots": [],
-          "samples": [
-            "status",
-            "what is the status",
-            "memory status"
           ]
         },
         {
@@ -67,37 +45,8 @@
           ]
         },
         {
-          "name": "VisitIntent",
-          "slots": [
-            {
-              "name": "state",
-              "type": "AMAZON.US_STATE"
-            },
-            {
-              "name": "country",
-              "type": "AMAZON.Country"
-            }
-          ],
-          "samples": [
-            "I visited {country}",
-            "I went to {country}",
-            "I want to visit {country}",
-            "I visited {state}",
-            "I went to {state}",
-            "I want to visit {state}"
-          ]
-        },
-        {
           "name": "BookmarkSetIntent",
           "slots": [
-            {
-              "name": "book",
-              "type": "AMAZON.Book"
-            },
-            {
-              "name": "chapter",
-              "type": "AMAZON.NUMBER"
-            },
             {
               "name": "page",
               "type": "AMAZON.NUMBER",
@@ -106,16 +55,97 @@
                 "page {page}",
                 "i left off on page {page}"
               ]
-            },
-            {
-              "name": "line",
-              "type": "AMAZON.NUMBER"
             }
           ],
           "samples": [
-            "set a bookmark for {book} chapter {chapter} page {page} line {line}",
+            "set a bookmark for {page}",
             "set a bookmark"
           ]
+        },
+        {
+          "name": "BookmarkGetIntent",
+          "slots": [],
+          "samples": [
+            "what page did I leave off on",
+            "tell me the bookmark",
+            "what is the bookmark"
+          ]
+        },
+        {
+          "name": "GetNewFactIntent",
+          "slots": [],
+          "samples": [
+            "give me a fact",
+            "tell me a fact"
+          ]
+        },
+        {
+          "name": "MyPhoneNumberIntent",
+          "slots": [
+            {
+              "name": "mobileNumber",
+              "type": "AMAZON.PhoneNumber",
+              "samples": [
+                "send it to {mobileNumber}",
+                "my mobile is {mobileNumber}",
+                "my phone number is {mobileNumber}",
+                "my number is {mobileNumber}",
+                "{mobileNumber}"
+              ]
+            }
+          ],
+          "samples": [
+            "send me a text",
+            "send a text",
+            "text me at {mobileNumber}",
+            "my mobile is {mobileNumber}",
+            "my number is {mobileNumber}",
+            "my phone number is {mobileNumber}"
+          ]
+        },
+        {
+          "name": "AMAZON.MoreIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateSettingsIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NextIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.PageUpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.PageDownIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.PreviousIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.ScrollRightIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.ScrollDownIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.ScrollLeftIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.ScrollUpIntent",
+          "samples": []
         }
       ],
       "types": [
@@ -196,20 +226,6 @@
           "prompts": {},
           "slots": [
             {
-              "name": "book",
-              "type": "AMAZON.Book",
-              "confirmationRequired": false,
-              "elicitationRequired": false,
-              "prompts": {}
-            },
-            {
-              "name": "chapter",
-              "type": "AMAZON.NUMBER",
-              "confirmationRequired": false,
-              "elicitationRequired": false,
-              "prompts": {}
-            },
-            {
               "name": "page",
               "type": "AMAZON.NUMBER",
               "confirmationRequired": false,
@@ -217,13 +233,24 @@
               "prompts": {
                 "elicitation": "Elicit.Slot.1298640133108.110887262871"
               }
-            },
+            }
+          ]
+        },
+        {
+          "name": "MyPhoneNumberIntent",
+          "confirmationRequired": true,
+          "prompts": {
+            "confirmation": "Confirm.Intent.1018158812104"
+          },
+          "slots": [
             {
-              "name": "line",
-              "type": "AMAZON.NUMBER",
+              "name": "mobileNumber",
+              "type": "AMAZON.PhoneNumber",
               "confirmationRequired": false,
-              "elicitationRequired": false,
-              "prompts": {}
+              "elicitationRequired": true,
+              "prompts": {
+                "elicitation": "Elicit.Slot.147640314547.594530034359"
+              }
             }
           ]
         }
@@ -236,6 +263,24 @@
           {
             "type": "PlainText",
             "value": "what page"
+          }
+        ]
+      },
+      {
+        "id": "Confirm.Intent.1018158812104",
+        "variations": [
+          {
+            "type": "PlainText",
+            "value": "Okay I heard {mobileNumber} , is that correct?"
+          }
+        ]
+      },
+      {
+        "id": "Elicit.Slot.147640314547.594530034359",
+        "variations": [
+          {
+            "type": "PlainText",
+            "value": "what is your phone number?"
           }
         ]
       }

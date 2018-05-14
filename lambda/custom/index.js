@@ -5,50 +5,17 @@
 
 const Alexa = require("ask-sdk");
 
+const constants = require('./constants.js');
+const helpers = require('./helpers.js');
+const interceptors = require('./interceptors.js');
+
+
 // let AWS = require("aws-sdk");
 // AWS.config.region = 'us-east-1';
 
 const invocationName = "forget me not";
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE || 'askMemorySkillTable';
-
-
-function getMemoryAttributes() {
-    const memoryAttributes = {
-        "history":[],
-
-        "launchCount":0,
-        "lastUseTimestamp":0,
-
-        "bookmark":0,
-        "factHistory":[],
-        "favoriteColor":"",
-        "mobileNumber":"",
-
-        // "name":"",
-        // "namePronounce":"",
-        // "email":"",
-        // "mobileNumber":"",
-        // "city":"",
-        // "state":"",
-        // "postcode":"",
-        // "birthday":"",
-        // "wishlist":[],
-    };
-    return memoryAttributes;
-}
-
-const facts = [ // include at least 5 facts
-    "Chameleon tongues can be as long as 28 inches.",
-    "It is estimated that over 100 billion people have lived on the earth so far.",
-    "The temperature on Venus is at least 462 degrees Celsius, which is about 864 degrees Fahrenheit.",
-    "The world's fastest land animal is Sarah, a cheetah that ran 100 meters in 5.95 seconds.",
-    "The quietest natural place on earth is in Washington State's Olympic National Park, within the Hoh Rainforest.",
-    "A liger is a hybrid offspring of a male lion and a female tiger.",
-    "Boston's Fenway Park has been the home of the Red Sox baseball team since 1912."
-];
-
-const DontRepeatLastN = 3;  // the last 3 facts are not available for the next random fact
 
 
 const LaunchHandler = {
@@ -60,7 +27,6 @@ const LaunchHandler = {
 
     },
     handle(handlerInput) {
-        console.log('**** in LaunchHandler ');
 
         const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
 
@@ -70,7 +36,7 @@ const LaunchHandler = {
         const thisTimeStamp = new Date(handlerInput.requestEnvelope.request.timestamp).getTime();
         // console.log('thisTimeStamp: ' + thisTimeStamp);
 
-        const span = timeDelta(lastUseTimestamp, thisTimeStamp);
+        const span = helpers.timeDelta(lastUseTimestamp, thisTimeStamp);
 
         let say = '';
         if (launchCount == 1) {
@@ -83,8 +49,10 @@ const LaunchHandler = {
         }
 
         const responseBuilder = handlerInput.responseBuilder;
+        const DisplayImg1 = constants.getDisplayImg1();
+        const DisplayImg2 = constants.getDisplayImg2();
 
-        if (supportsDisplay(handlerInput)) {
+        if (helpers.supportsDisplay(handlerInput)) {
             const myImage1 = new Alexa.ImageHelper()
                 .addImageInstance(DisplayImg1.url)
                 .getImage();
@@ -103,16 +71,17 @@ const LaunchHandler = {
                 backButton : 'HIDDEN',
                 backgroundImage: myImage2,
                 image: myImage1,
-                title: capitalize(invocationName),
+                title: helpers.capitalize(invocationName),
                 textContent: primaryText,
             });
         }
+        const welcomeCardImg = constants.getWelcomeCardImg();
 
         return handlerInput.responseBuilder
             .speak(say)
             .reprompt(say)
             .withStandardCard('Welcome!',
-                'Hello!\nThis is a card for your skill, ' + capitalize(invocationName),
+                'Hello!\nThis is a card for your skill, ' + helpers.capitalize(invocationName),
                 welcomeCardImg.smallImageUrl, welcomeCardImg.largeImageUrl)
             .getResponse();
 
@@ -278,8 +247,8 @@ const MyPhoneNumberHandler = {
         } else {
             slotStatus += ' slot mobile number is empty. ';
         }
-
-        const bodyText = 'Hello! ' + emoji.smile + ' from the Alexa skill!\n'
+        const emojiSmile = constants.getEmoji('smile');
+        const bodyText = 'Hello! ' + emojiSmile + ' from the Alexa skill!\n'
             + 'Here is the product I recommend: \n'
             + 'https://www.amazon.com/dp/B01C4MGKQE/ref=cm_sw_r_tw_dp_U_x_HNi4AbJEHN1G0';
             // + 'https://youtu.be/DLzxrzFCyOs';
@@ -292,7 +261,7 @@ const MyPhoneNumberHandler = {
         handlerInput.attributesManager.setPersistentAttributes(sessionAttributes);
 
         return new Promise((resolve) => {
-            sendTxtMessage(params, request.locale, myResult=>{
+            helpers.sendTxtMessage(params, request.locale, myResult=>{
                 let say = myResult + ' What else can I help you with?';
 
                 resolve(handlerInput.responseBuilder
@@ -321,21 +290,25 @@ const GetNewFactHandler = {
         let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
 
         factHistory = sessionAttributes['factHistory'] || [];
-        console.log('factHistory [ ' + factHistory.toString() + ' ]');
+        // console.log('factHistory [ ' + factHistory.toString() + ' ]');
+
+        const facts = constants.getFacts();
 
 
         if (factHistory.length === 0) {  // first time
 
-            fact = randomArrayElement(facts);
-            console.log('fact : ' + fact);
+            fact = helpers.randomArrayElement(facts);
+            // console.log('fact : ' + fact);
             factHistory.push(fact);
 
         } else {
 
             let availableFacts = facts.diff(factHistory);
-            fact = randomArrayElement(availableFacts);
+            fact = helpers.randomArrayElement(availableFacts);
             console.log('fact ' + fact);
             factHistory.push(fact);
+
+            const DontRepeatLastN = constants.getDontRepeatLastN();
 
             if (factHistory.length > DontRepeatLastN) {
                 factHistory.shift();  // remove first element
@@ -394,23 +367,6 @@ const GetNewFactHandler = {
 //     }
 // };
 
-// const RepeatHandler = {
-//     canHandle(handlerInput) {
-//         return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-//             && handlerInput.requestEnvelope.request.intent.name === 'RepeatIntent';
-//     },
-//     handle(handlerInput) {
-//
-//         let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-//
-//         let say = 'I will repeat that now.';
-//
-//         return handlerInput.responseBuilder
-//             .speak(say)
-//             .reprompt('Try again. ' + say)
-//             .getResponse();
-//     }
-// };
 
 const HelpHandler = {
     canHandle(handlerInput) {
@@ -468,7 +424,7 @@ const YesHandler = {
         } else {
             if (previousIntent === "ResetIntent") {
 
-                const initialAttributes = getMemoryAttributes();
+                const initialAttributes = constants.getMemoryAttributes();
 
                 sessionAttributes = initialAttributes;
 
@@ -583,9 +539,8 @@ const RequestPersistenceInterceptor = {
                         if(Object.keys(sessionAttributes).length === 0) {
                             console.log('--- First Ever Visit for userId ' + handlerInput.requestEnvelope.session.user.userId);
 
-                            const initialAttributes = getMemoryAttributes();
+                            const initialAttributes = constants.getMemoryAttributes();
                             sessionAttributes = initialAttributes;
-
 
                         }
 
@@ -615,7 +570,8 @@ const RequestPersistenceInterceptor = {
 const RequestHistoryInterceptor = {
     process(handlerInput) {
 
-        const maxHistorySize = 10;  // number of intent/request events to store
+
+        const maxHistorySize = constants.getMaxHistorySize();  // number of intent/request events to store
 
         const thisRequest = handlerInput.requestEnvelope.request;
         let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
@@ -648,7 +604,7 @@ const RequestHistoryInterceptor = {
             IntentRequest = {'IntentRequest' : thisRequest.type};
         }
 
-        if(history.length > maxHistorySize) {
+        if(history.length >= maxHistorySize) {
             history.shift();
         }
         history.push(IntentRequest);
@@ -723,156 +679,29 @@ exports.handler = skillBuilder
 //------------------------------------------------------------------------------
 // Helper Functions
 
-function supportsDisplay(handlerInput) // returns true if the skill is running on a device with a display (Echo Show, Echo Spot, etc.)
-{                                      //  Enable your skill for display as shown here: https://alexa.design/enabledisplay
-    const hasDisplay =
-        handlerInput.requestEnvelope.context &&
-        handlerInput.requestEnvelope.context.System &&
-        handlerInput.requestEnvelope.context.System.device &&
-        handlerInput.requestEnvelope.context.System.device.supportedInterfaces &&
-        handlerInput.requestEnvelope.context.System.device.supportedInterfaces.Display;
-
-    return hasDisplay;
-}
-
-
-const welcomeCardImg = {
-    smallImageUrl: "https://s3.amazonaws.com/skill-images-789/cards/card_plane720_480.png",
-    largeImageUrl: "https://s3.amazonaws.com/skill-images-789/cards/card_plane1200_800.png"
-
-};
-
-const DisplayImg1 = {
-    title: 'Jet Plane',
-    url: 'https://s3.amazonaws.com/skill-images-789/display/plane340_340.png'
-};
-const DisplayImg2 = {
-    title: 'Starry Sky',
-    url: 'https://s3.amazonaws.com/skill-images-789/display/background1024_600.png'
-
-};
-
-function timeDelta(t1, t2) {
-
-    const dt1 = new Date(t1);
-    const dt2 = new Date(t2);
-    const timeSpanMS = dt2.getTime() - dt1.getTime();
-    const span = {
-        "timeSpanMIN": Math.floor(timeSpanMS / (1000 * 60 )),
-        "timeSpanHR": Math.floor(timeSpanMS / (1000 * 60 * 60)),
-        "timeSpanDAY": Math.floor(timeSpanMS / (1000 * 60 * 60 * 24)),
-        "timeSpanDesc" : ""
-    };
-
-
-    if (span.timeSpanHR < 2) {
-        span.timeSpanDesc = span.timeSpanMIN + " minutes";
-    } else if (span.timeSpanDAY < 2) {
-        span.timeSpanDesc = span.timeSpanHR + " hours";
-    } else {
-        span.timeSpanDesc = span.timeSpanDAY + " days";
-    }
-
-
-    return span;
-
-}
-
-function randomArrayElement(myArray) {
-    return(myArray[Math.floor(Math.random() * myArray.length)]);
-}
-
-function capitalize(myString) {
-
-    return myString.replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); }) ;
-}
-
-
-function resolveCanonical(slot){
-    let canonical = '';
-    if (slot.hasOwnProperty('resolutions')) {
-        canonical = slot.resolutions.resolutionsPerAuthority[0].values[0].value.name;
-    } else {
-        canonical = slot.value;
-    }
-
-    return canonical;
-}
-
-function generatePassPhrase() {
-    // 'correct', 'horse', 'battery', 'staple'
-    const word1 = ['nice', 'good', 'clear', 'kind', 'red', 'green', 'orange', 'yellow', 'brown', 'careful',
-        'powerful', 'vast', 'happy', 'deep', 'warm', 'cold', 'heavy', 'dry', 'quiet', 'sweet',
-        'short', 'long', 'late', 'early', 'quick', 'fast', 'slow', 'other','public','clean','proud',
-        'flat','round', 'loud', 'funny', 'free', 'tall', 'short', 'big', 'small'];
-
-    const word2 = ['person', 'day', 'car', 'tree', 'fish', 'wheel', 'chair', 'sun', 'moon', 'star',
-        'story', 'voice', 'job', 'fact', 'record', 'computer', 'ocean', 'building', 'cat', 'dog', 'rabbit',
-        'carrot', 'orange', 'bread', 'soup', 'spoon', 'fork', 'straw', 'napkin', 'fold', 'pillow', 'radio',
-        'towel', 'pencil', 'table', 'mark', 'teacher', 'student', 'developer', 'raisin', 'pizza', 'movie',
-        'book', 'cup', 'plate', 'wall', 'door', 'window', 'shoes', 'hat', 'shirt', 'bag', 'page', 'clock',
-        'glass', 'button', 'bump', 'paint', 'song', 'story', 'memory', 'school', 'corner', 'wire', 'cable'
-    ];
-    const numLimit = 999;
-
-    const phraseObject = {
-        'word1': randomArrayElement(word1),
-        'word2': randomArrayElement(word2),
-        'number': Math.floor(Math.random() * numLimit)
-    };
-    return phraseObject;
-
-}
 Array.prototype.diff = function(a) {
     return this.filter(function(i) {return a.indexOf(i) < 0;});
 };
 
-function sendTxtMessage(params, locale, callback) {
 
-    const AWS = require('aws-sdk');
-    //AWS.config.update({region: AWSregion});
+// const welcomeCardImg = {
+//     smallImageUrl: "https://s3.amazonaws.com/skill-images-789/cards/card_plane720_480.png",
+//     largeImageUrl: "https://s3.amazonaws.com/skill-images-789/cards/card_plane1200_800.png"
+//
+// };
+//
+// const DisplayImg1 = {
+//     title: 'Jet Plane',
+//     url: 'https://s3.amazonaws.com/skill-images-789/display/plane340_340.png'
+// };
+//
+// const DisplayImg2 = {
+//     title: 'Starry Sky',
+//     url: 'https://s3.amazonaws.com/skill-images-789/display/background1024_600.png'
+//
+// };
 
-    let mobileNumber = params.PhoneNumber.toString();
 
 
-    if (locale === 'en-US') {
-        if (mobileNumber.length < 10 ){
-            const errMsg = 'mobileNumber provided is too short: ' + mobileNumber + '. ';
-            callback(errMsg);
-        }
-        if (mobileNumber.substring(0,1) !== '1' ) {
-            mobileNumber = '1' + mobileNumber;
-        }
-    }
 
-    if (mobileNumber.substring(0,1) !== '+') {
-        mobileNumber = '+' + mobileNumber;
-    }
-
-    let snsParams = params;
-    snsParams.PhoneNumber = mobileNumber;
-
-    const SNS = new AWS.SNS();
-
-    SNS.publish(snsParams, function(err, data){
-
-        console.log('sending message to ' + mobileNumber );
-
-        if (err) console.log(err, err.stack);
-
-        callback('I sent you a text message. ');
-
-    });
-}
-
-const emoji = {
-    'thumbsup':     '\uD83D\uDC4D',
-    'smile':        '\uD83D\uDE0A',
-    'star':         '\uD83C\uDF1F',
-    'robot':        '\uD83E\uDD16',
-    'germany':      '\ud83c\udde9\ud83c\uddea',
-    'uk':           '\ud83c\uddec\ud83c\udde7',
-    'usa':          '\ud83c\uddfa\ud83c\uddf8'
-};
-// Escaped Unicode for other emoji:  https://github.com/wooorm/gemoji/blob/master/support.md
 

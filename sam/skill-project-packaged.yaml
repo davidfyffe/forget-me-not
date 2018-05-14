@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Alexa Memory Skill
+Metadata:
+  Name: skill-sample-nodejs-memory
+Outputs:
+  Greeting:
+    Value:
+      Ref: withTableName
+Parameters:
+  withTableName:
+    Default: askMemorySkillTable
+    Type: String
+Resources:
+  MemoryTable:
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName:
+        Ref: withTableName
+    Type: AWS::Serverless::SimpleTable
+  askMemorySkillFunction:
+    Properties:
+      CodeUri: s3://alexabucket234/74c65131dc75ef8a68b8ff48c69c7a1f
+      Description: Alexa Memory Skill Lambda function
+      Environment:
+        Variables:
+          DYNAMODB_TABLE:
+            Ref: withTableName
+      Events:
+        AlexaTrigger:
+          Type: AlexaSkill
+      FunctionName: askForgetMeNot
+      Handler: index.handler
+      MemorySize: 128
+      Policies:
+      - Statement:
+        - Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          Effect: Allow
+          Resource:
+          - arn:aws:dynamodb:::table/ask*
+        Version: '2012-10-17'
+      Runtime: nodejs8.10
+      Timeout: 7
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31

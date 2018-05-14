@@ -1,5 +1,41 @@
 # forget-me-not
-Alexa skill sample showing Persistent memory
+This is an Alexa skill sample showing Persistent memory.  Persistent memory is long term memory.
+When the user relaunches skill, after five minutes or five weeks, the skill recalls and leverages past interactions to provide a more personalized experience.
+
+## Features
+
+**Bookmark**
+1. Say "set a bookmark for page 123"
+1. Say "stop"
+1. Launch the skill again
+1. Say "what is my bookmark".  The skill says, "your bookmark is page 123".
+
+**Fact**
+1. Say "tell me a fact". You should hear a random fact
+1. Say "stop"
+1. Launch the skill again
+1. Say "tell me a fact".  You should hear a random fact, but not a repeat one of the previous three facts.
+
+
+**Reset Memory**
+1. Say "reset memory". Alexa will warn you that you are about to delete all your saved attributes.
+1. Say Yes.  The skill will confirm and then end.
+1. Launch the skill again
+1. Say "what is my bookmark?".  The skill will inform you that you do not have any bookmark saved.
+
+
+## Code
+
+### Setting and Getting persistent attributes
+This skill uses [session and persistent attributes](https://github.com/alexa/alexa-skills-kit-sdk-for-nodejs/wiki/Skill-Attributes) to track key data elements for the user.
+
+Session attributes are active during the scope of one Alexa skill session.  Persistent attributes must be stored and retrieved from a database, such as DynamoDB.
+
+### Interceptors
+[Request and Response interceptors](https://github.com/alexa/alexa-skills-kit-sdk-for-nodejs/wiki/Request-Processing)
+handle the task of saving session attributes to persistent attributes.  Each time a skill is launched, a request interceptor will load previous persistent attributes into the session attributes.
+When a skill is stopped (or times out), a response interceptor will save session attributes to persistent attributes.
+
 
 ## Setup
 

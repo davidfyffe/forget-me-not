@@ -5,21 +5,22 @@
 // node testflow
 // node testflow mydialog.txt
 let AWS = require('aws-sdk');
-AWS.config.region = 'us-east-1';
+let region = process.env.AWS_REGION || 'us-east-1';
+AWS.config.region = region;
 
 // Toggle on or off various debugging outputs
 const options = {
 
     delay        : 0.5,     // seconds between requests
     stdout       : true,    // standard output  / console.log() in your code
-    attributes   : true,   // true, false, or a string with the name of an attribute
+    attributes   : false,   // true, false, or a string with the name of an attribute
     speechOutput : true,
     slots        : true
 };
 
 
 var appId = 'amzn1.echo-sdk-ams.app.1234';  // set this to match your skill's alexa.appId to remove warnings
-var locale = 'en-US';
+var locale = 'en-AU';
 
 var fs = require("fs");
 var MyLambdaFunction = require('../lambda/custom/index.js'); // Your Lambda source with exports.handler

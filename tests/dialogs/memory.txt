@@ -1,11 +1,12 @@
 LaunchRequest
 MyColorIsIntent color=red
-BookmarkGetIntent
-BookmarkSetIntent page=12
+BookmarkSetIntent page=28
 BookmarkGetIntent
 ResetIntent
 AMAZON.YesIntent
 LaunchRequest
 BookmarkGetIntent
-# AMAZON.HelpIntent
+MyColorIsIntent color=green
+MyColorIsIntent color=blue
+AMAZON.HelpIntent
 AMAZON.StopIntent
