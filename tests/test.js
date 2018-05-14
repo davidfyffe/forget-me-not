@@ -2,9 +2,7 @@
 // From the command prompt, type "node test.js"
 
 let AWS = require('aws-sdk');
-// let region = Regions.fromName(System.getenv("AWS_DEFAULT_REGION")) || 'us-east-1';
-let region = process.env.AWS_REGION || 'us-east-1';
-AWS.config.region = region;
+AWS.config.region = process.env.AWS_REGION || 'us-east-1';
 
 const MyLambdaFunction = require('../lambda/custom/index.js'); // assumes single Lambda function with exports.handler
 

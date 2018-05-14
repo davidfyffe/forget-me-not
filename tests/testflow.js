@@ -5,8 +5,7 @@
 // node testflow
 // node testflow mydialog.txt
 let AWS = require('aws-sdk');
-let region = process.env.AWS_REGION || 'us-east-1';
-AWS.config.region = region;
+AWS.config.region = process.env.AWS_REGION || 'us-east-1';
 
 // Toggle on or off various debugging outputs
 const options = {

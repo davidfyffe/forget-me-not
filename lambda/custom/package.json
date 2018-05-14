@@ -9,6 +9,6 @@
   "author": "me",
   "license": "Apache-2.0",
   "dependencies": {
-    "ask-sdk": ">=2.0.4",
+    "ask-sdk": ">=2.0.4"
   }
 }

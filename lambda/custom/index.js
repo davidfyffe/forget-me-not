@@ -10,8 +10,9 @@ const helpers = require('./helpers.js');
 const interceptors = require('./interceptors.js');
 
 
-// let AWS = require("aws-sdk");
-// AWS.config.region = 'us-east-1';
+let AWS = require('aws-sdk');
+AWS.config.region = process.env.AWS_REGION || 'us-east-1';
+
 
 const invocationName = "forget me not";
 
