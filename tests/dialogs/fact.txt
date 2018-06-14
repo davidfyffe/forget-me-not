@@ -1,9 +1,4 @@
 LaunchRequest
 GetNewFactIntent
 GetNewFactIntent
-ResetIntent
-AMAZON.YesIntent
-LaunchRequest
-GetNewFactIntent
-GetNewFactIntent
 AMAZON.StopIntent

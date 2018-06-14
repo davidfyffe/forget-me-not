@@ -33,7 +33,7 @@
           ]
         },
         {
-          "name": "MyColorIsIntent",
+          "name": "MyColorSetIntent",
           "slots": [
             {
               "name": "color",
@@ -41,6 +41,7 @@
             }
           ],
           "samples": [
+            "my color is {color}",
             "my favorite color is {color}"
           ]
         },
@@ -146,6 +147,27 @@
         {
           "name": "AMAZON.ScrollUpIntent",
           "samples": []
+        },
+        {
+          "name": "SpeakSpeedIntent",
+          "slots": [
+            {
+              "name": "speakingSpeedChange",
+              "type": "speakSpeedSlotType"
+            }
+          ],
+          "samples": [
+            "speak {speakingSpeedChange}"
+          ]
+        },
+        {
+          "name": "MyColorGetIntent",
+          "slots": [],
+          "samples": [
+            "get my color",
+            "what is my favorite color",
+            "what is my color"
+          ]
         }
       ],
       "types": [
@@ -155,19 +177,30 @@
             {
               "id": "brn",
               "name": {
-                "value": "brown"
+                "value": "brown",
+                "synonyms": [
+                  "tan",
+                  "earth",
+                  "sienna"
+                ]
               }
             },
             {
               "id": "blk",
               "name": {
-                "value": "black"
+                "value": "black",
+                "synonyms": [
+                  "ebony"
+                ]
               }
             },
             {
               "id": "wht",
               "name": {
-                "value": "white"
+                "value": "white",
+                "synonyms": [
+                  "snow"
+                ]
               }
             },
             {
@@ -195,13 +228,19 @@
             {
               "id": "grn",
               "name": {
-                "value": "green"
+                "value": "green",
+                "synonyms": [
+                  "lime"
+                ]
               }
             },
             {
               "id": "blu",
               "name": {
-                "value": "blue"
+                "value": "blue",
+                "synonyms": [
+                  "navy"
+                ]
               }
             },
             {
@@ -212,6 +251,21 @@
                   "scarlet",
                   "crimson"
                 ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "speakSpeedSlotType",
+          "values": [
+            {
+              "name": {
+                "value": "slower"
+              }
+            },
+            {
+              "name": {
+                "value": "faster"
               }
             }
           ]
@@ -238,10 +292,8 @@
         },
         {
           "name": "MyPhoneNumberIntent",
-          "confirmationRequired": true,
-          "prompts": {
-            "confirmation": "Confirm.Intent.1018158812104"
-          },
+          "confirmationRequired": false,
+          "prompts": {},
           "slots": [
             {
               "name": "mobileNumber",

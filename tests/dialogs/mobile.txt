@@ -1,4 +1,4 @@
 LaunchRequest
-# MyPhoneNumberIntent mobileNumber=508259846
+MyPhoneNumberIntent mobileNumber=5082598463
 # MyPhoneNumberIntent mobileNumber=6140667317
 AMAZON.StopIntent

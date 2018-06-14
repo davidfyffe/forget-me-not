@@ -7,4 +7,5 @@ zip  ../index.zip * –X -r
 
 cd ..
 aws lambda update-function-code --function-name ForgetMeNot --zip-file fileb://index.zip
+cd ..
 

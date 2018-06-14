@@ -1,0 +1,17 @@
+LaunchRequest
+# MyColorGetIntent
+MyColorSetIntent color=
+end
+MyColorSetIntent color=crimson/red
+MyColorSetIntent color=blue/blue
+# MyColorSetIntent color=
+MyColorGetIntent
+AMAZON.StopIntent
+~ 333
+@ -6d
+MyColorSetIntent color=red
+AMAZON.StopIntent
+~ 444
+@ -3d
+LaunchRequest
+AMAZON.StopIntent

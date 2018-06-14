@@ -2,7 +2,18 @@
  * Created by mccaul on 5/11/18.
  */
 
+let AWS = require('aws-sdk');
+AWS.config.region = process.env.AWS_REGION || 'us-east-1';
+
+const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE || 'askMemorySkillTable';
+console.log('DYNAMODB_TABLE ' + DYNAMODB_TABLE);
+
+const localDynamoClient = new AWS.DynamoDB({apiVersion : 'latest', endpoint : 'http://localhost:8000'});
+
 module.exports = {
+        'AWS': AWS,
+        'DYNAMODB_TABLE': DYNAMODB_TABLE,
+
         'getMemoryAttributes': function() {
             const memoryAttributes = {
 
@@ -10,11 +21,15 @@ module.exports = {
 
             "launchCount":0,
             "lastUseTimestamp":0,
+            "joinRank": 1,
+            "skillUserCount": 1,
 
             "bookmark":0,
             "factHistory":[],
             "favoriteColor":"",
             "mobileNumber":"",
+
+            "speakingSpeed":"medium"
 
             // "name":"",
             // "namePronounce":"",

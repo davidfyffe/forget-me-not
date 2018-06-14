@@ -4,55 +4,118 @@
 //
 // node testflow
 // node testflow mydialog.txt
-let AWS = require('aws-sdk');
-AWS.config.region = process.env.AWS_REGION || 'us-east-1';
+
+// let AWS = require('aws-sdk');
+// AWS.config.region = 'us-east-1';
 
 // Toggle on or off various debugging outputs
 const options = {
 
     delay        : 0.5,     // seconds between requests
     stdout       : true,    // standard output  / console.log() in your code
-    attributes   : false,   // true, false, or a string with the name of an attribute
+    attributes   : 'factHistory',   // true, false, or a string with the name of an attribute
     speechOutput : true,
-    slots        : true
+    slots        : true,
+    cards        : false,
+    userId       : '123',  // final 3 chars of test user Id, can be overridden
+    timestamp    : ''      // defaults to now, can set via '2018-04-03T21:47:49Z'
 };
 
+if (options.timestamp === '') {
+    options.timestamp = new Date().toISOString();
+}
 
-var appId = 'amzn1.echo-sdk-ams.app.1234';  // set this to match your skill's alexa.appId to remove warnings
-var locale = 'en-AU';
+let userId = options.userId;
+let runTime = new Date();
 
-var fs = require("fs");
-var MyLambdaFunction = require('../lambda/custom/index.js'); // Your Lambda source with exports.handler
 
-var MyDialog = './dialogs/default.txt';
+
+const fs = require("fs");
+const MyLambdaFunction = require('../lambda/custom/index.js'); // Your Lambda source with exports.handler
+
+let MyDialog = './dialogs/default.txt';
 
 if (process.argv[2]) {
     MyDialog = './dialogs/' + process.argv[2];
 }
 
+const appId = 'amzn1.echo-sdk-ams.app.1234';  // set this to match your skill's alexa.appId to remove warnings
+const locale = 'en-US';
+
 console.log();
-console.log('================================================================================');
-console.log('Running test sequence from dialog file : ', MyDialog);
+// console.log('================================================================================');
+console.log('Running testflow with dialog sequence file : ', MyDialog);
 console.log();
 
 const OriginalConsoleLog = console.log;
 
-var slotname = '';
-var slotvalue = '';
-var sa = {};
-var current_line = 1;
-var lineArray = [];
-var Intent = '';
-var prompt = false;
+let slotname = '';
+let slotvalue = '';
+let sa = {};
+let current_line = 1;
+let lineArray = [];
+let Intent = '';
+let prompt = false;
+let ses = false; // shoud end session
+let newSession = true;
+let userIdLast3 = options.userId;
+let timeOffset = '0m';
 
 
-var context = { // lambda functions may finish by calling context.succeed OR the callback function passed as the third argument
+let context = { // lambda functions may finish by calling context.succeed OR the callback function passed as the third argument
     'succeed': function (data) {
+        // console.log('context.succeed:\n' + JSON.stringify(data,null, 2));
 
-        if (data.response.shouldEndSession ) {
+        if (data.response.shouldEndSession || typeof data.response.shouldEndSession === 'undefined') {
             sa = {};
         } else {
             sa = data.sessionAttributes;
+        }
+
+
+
+        let textToSay = data.response.outputSpeech.ssml;
+
+        textToSay = textToSay.replace('<speak>', '    ');
+        textToSay = textToSay.replace('</speak>', '');
+
+        if (options.speechOutput) {
+            console.log = OriginalConsoleLog;
+            console.log('\x1b[36m%s\x1b[0m ', textToSay);
+        }
+
+
+        if (options.cards) {
+            if (data.response.card) {
+                let cardWidth = 20;
+                let linePadding = 0;
+
+                let cardTitle = data.response.card.title || '';
+                let cardContent = data.response.card.content || data.response.card.text;
+                if (!cardContent || cardContent =='' ) {
+                    cardContent = ' ';
+                }
+                cardContentLines = cardContent.split('\n');
+
+
+                 if (cardTitle.length > cardWidth) {
+                    cardWidth = cardTitle.length;
+                }
+                for(let i = 0; i < cardContentLines.length; i++) {
+                    if (cardContentLines[i].length > cardWidth) {
+                        cardWidth = cardContentLines[i].length;
+                    }
+                }
+                linePadding = (cardWidth < cardTitle.length ? 0 : cardWidth - cardTitle.length);
+                console.log('\x1b[44m\x1b[4m\x1b[37m%s\x1b[0m\x1b[0m ', cardTitle + ' '.repeat(linePadding));
+
+                for(let i = 0; i < cardContentLines.length; i++) {
+                    linePadding = (cardWidth < cardContentLines[i].length ? 0 : cardWidth - cardContentLines[i].length);
+                    console.log('\x1b[44m\x1b[37m%s\x1b[0m ', cardContentLines[i] + ' '.repeat(linePadding));
+                }
+                // console.log('      \x1b[44m\x1b[37m%s\x1b[0m ', cardContent);
+            }
+
         }
 
         if (typeof options.attributes == 'boolean') {
@@ -62,10 +125,10 @@ var context = { // lambda functions may finish by calling context.succeed OR the
                 console.log('\x1b[35m%s\x1b[0m ', JSON.stringify(sa, null, 2)); // for formatted JSON
             }
         } else {  // you can define an attribute to display by setting options.attribute to a string, such as 'STATE'
-            var printAttributeObject = {};
+            let printAttributeObject = {};
             console.log = OriginalConsoleLog;
-            var printAttributeName = options.attributes.toString();
-            var printAttribute = sa[printAttributeName];
+            let printAttributeName = options.attributes.toString();
+            let printAttribute = sa[printAttributeName];
             if (!printAttribute) {
                 printAttribute = '';
             } else if (typeof printAttribute == 'object') {
@@ -77,30 +140,27 @@ var context = { // lambda functions may finish by calling context.succeed OR the
 
         }
 
-        var textToSay = data.response.outputSpeech.ssml;
-
-        textToSay = textToSay.replace('<speak>', '    ');
-        textToSay = textToSay.replace('</speak>', '');
-
-        if (options.speechOutput) {
-            console.log = OriginalConsoleLog;
-            console.log('\x1b[36m%s\x1b[0m ', textToSay);
+        if (data.response.shouldEndSession ) {
+            console.log('================================================================\n');
+            newSession = true; // for next time
+        } else {
+            console.log('----------------------------------------------------------------\n');
+            newSession = false; // for next time
         }
-
-
         // =====================
 
         if (current_line < lineArray.length ) {
 
             // blocking pause
-            var waitTill = new Date(new Date().getTime() + options.delay * 1000);
+            let waitTill = new Date(new Date().getTime() + options.delay * 1000);
             while(waitTill > new Date()){}
 
-            console.log();
+            // console.log();
 
             runSingleTest(lineArray, current_line++, sa);
 
         } else {
+            console.log();
             process.exit();
 
         }
@@ -116,8 +176,7 @@ var context = { // lambda functions may finish by calling context.succeed OR the
 
 fs.readFile(MyDialog, function (err, data) {  // open dialog sequence file and read Intents
 
-    // var newSession = true;
-    var request = {};
+    let request = {};
 
     lineArray = cleanArray(data.toString().split('\n')); // remove empty or comment lines (# or //)
 
@@ -128,11 +187,10 @@ fs.readFile(MyDialog, function (err, data) {  // open dialog sequence file and r
 
 function runSingleTest(myLineArray, currentLine, sa) {
 
-    console.log('--------------------------------------------------------------------------------');
-    // console.log('testing line ', currentLine);
-    // console.log('testing line values ', myLineArray[currentLine]);
+    prompt = false;
 
     let tokenArray = myLineArray[currentLine].split(' ');
+
 
     if (tokenArray[0].replace('\r','') == '?') {  // pause and prompt the user to confirm
         prompt = true;
@@ -140,24 +198,47 @@ function runSingleTest(myLineArray, currentLine, sa) {
         tokenArray.shift();  // removes first item
     }
 
-    let requestType = tokenArray[0].replace('\r','');
-    tokenArray.shift();
+    if (tokenArray[0].replace('\r','') == 'end') {  // quit and skip remaining lines
+        process.exit(1);
+    }
 
-    prompt = false;
+    if (tokenArray[0].replace('\r','') == '~') { // gather user ID
 
-    let newSession = true;
+        tokenArray.shift();  // removes first item
+        userIdLast3 = tokenArray[0].replace('\r','');
 
-    if (currentLine > 0 && requestType !== 'LaunchRequest') {
-        newSession = false;
+        console.log('  \x1b[37m\x1b[2m%s\x1b[0m', '[userId set to *' + userIdLast3 + ']');
+
+        myLineArray.shift();
+        // currentLine = currentLine + 1;
+        tokenArray = myLineArray[currentLine].split(' ');
+        // runSingleTest(lineArray, current_line++, sa);
+    }
+
+    if (tokenArray[0].replace('\r','') == '@') { // gather time offset
+
+        tokenArray.shift();  // removes first item
+        timeOffset = tokenArray[0].replace('\r','');
+
+        console.log('  \x1b[37m\x1b[2m%s\x1b[0m', '[timeOffset set to ' + timeOffset + ']');
+
+        myLineArray.shift();
+
+        tokenArray = myLineArray[currentLine].split(' ');
 
     }
 
+    let requestType = tokenArray[0].replace('\r','');
+    tokenArray.shift();
 
     if (requestType =='LaunchRequest') {
+        newSession = true;
+        let eventTime = addTime(new Date(options.timestamp), timeOffset);
+
         request =  {
             "type": requestType,
             "locale": locale,
-            "timestamp": "2018-04-03T21:47:49Z"
+            "timestamp":  eventTime // options.timestamp
         };
 
         // console.log(' ========== %s. Request  \x1b[31m\x1b[1m%s\x1b[0m', currentLine+1, requestType);
@@ -171,7 +252,7 @@ function runSingleTest(myLineArray, currentLine, sa) {
         Intent = requestType;
         slotArray = [];
 
-        var sdkState = '';
+        let sdkState = '';
 
         if(sa['STATE']){
             sdkState = sa['STATE'];
@@ -193,11 +274,12 @@ function runSingleTest(myLineArray, currentLine, sa) {
 
 slotArray = [];
 
-function processArray(arr, cb) {
+function processArray(arr, cb) {  // process multiple slots as array
+    const UTCnow = new Date().toISOString();
 
     if(arr.length > 0) {
 
-        var equalsPosition = arr[0].indexOf('=');
+        let equalsPosition = arr[0].indexOf('=');
         slotname = arr[0].substr(0, equalsPosition);
         slotvalue = decodeURI(arr[0].substr(equalsPosition+1, 300)).replace('\r','');
 
@@ -206,15 +288,20 @@ function processArray(arr, cb) {
             // console.log('slotname, slotvalue, newValue');
             // console.log(slotname, slotvalue, newValue);
 
-            var answer = newValue.toString().trim();
+            let answer = newValue.toString().trim();
+
+            // console.log('***** slot value is ' + answer);
 
             if(answer == '') {
                 answer = slotvalue;
             }
 
-            if (answer != '') {
-                slotArray.push('"' + slotname + '": {"name":"' + slotname + '","value":"' + answer + '"}');
-            }
+            //if (answer != '') {
+
+            let slotObj = buildSlotObj(slotname, answer);
+            slotArray.push(slotObj);
+
+            //}
 
             arr.shift();
             processArray(arr, cb);  // RECURSION
@@ -226,13 +313,14 @@ function processArray(arr, cb) {
     } else {  // nothing left in slot array
 
 
-        var slotArrayString = '{' + slotArray.toString() + '}';
+        let slotArrayString = '{' + slotArray.toString() + '}';
 
-        var slotObj = JSON.parse(slotArrayString);
+        let slotObj = JSON.parse(slotArrayString);
+        let eventTime = addTime(new Date(options.timestamp), timeOffset);
 
-        var req =  {
+        let req =  {
             "type": "IntentRequest",
-            "timestamp": "2018-04-03T21:47:49Z",
+            "timestamp": eventTime, // options.timestamp
             "intent": {
                 "name": Intent,
                 "slots" : slotObj
@@ -264,10 +352,10 @@ function prepareTestRequest(sa, newSession, request){
                         "applicationId": "amzn1.ask.skill.50ef6df2-ffb8-4692-8e18-c9b485cc03b0"
                     },
                     "user": {
-                        "userId": "amzn1.ask.account.AG4BEMGBJIJYRAGKP5YLYGJDISRIQVPWOEABD3OQW66MTPOF4JRHLAEETH5TBIOT652I3KUYZSWA5MAZ55GUTIBLEMUQ4YQBPKXVG4YSFHLQL27UEC6YQDXTEYH5MD4NMK4M7UJ4FWTRPKTSII4R733EX3TVC3UKLKOBMHXXM5CHOX2TDUV2WPF6NCWF5KLJETNGQ5YC7EOUFLO"
+                        "userId": "amzn1.ask.account.AG4BEMGBJIJYRAGKP5YLYGJDISRIQVPWOEABD3OQW66MTPOF4JRHLAEETH5TBIOT652I3KUYZSWA5MAZ33GUTIBLEMUQ4YQBPKXVG4YSFHLQL27UEC6YQDXTEYH5MD4NMK4M7UJ4FWTRPKTSII4R733EX3TVC3UKLKOBMHXXM5CHOX2TDUV2WPF6NCWF5KLJETNGQ5YC7UID" + userIdLast3
                     },
                     "device": {
-                        "deviceId": "amzn1.ask.device.AFUWNBZ2FSMDFRJDWWA7GSZQBYX4DBS52RV7CHECNUTBCVMT6WW5SVO56SLUZ6D6TIJM5J2S6XNXKHAUU2RCXXQKUI75C37IOPVAA6HCVK5E5NV5EBVC5YUFAMIGD4FYZ4XFA4OEPDNCJYCHXN2RRGDQOZYQ",
+                        "deviceId": "amzn1.ask.device.AFUWNBZ2FSMDESJDWWA7GSZQBYX4DBS52RV7CHECNUTBCVMT6WW5SVO56SLUZ6D6TIJM5J2S6XNXKHAUU2RCXXQKUI75C37IOPVAA6HCVK5E5NV5EBVC5YUFAMIGD4FYZ4XFA4OEPDNCJYCHXN2RRGDQOZYQ",
                         "supportedInterfaces": {
                             "AudioPlayer": {},
                             "Display": {
@@ -277,7 +365,7 @@ function prepareTestRequest(sa, newSession, request){
                         }
                     },
                     "apiEndpoint": "https://api.amazonalexa.com",
-                    "apiAccessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjEifQ.eyJhdWQiOiJodHRwczovL2FwaS5hbWF6b25hbGV4YS5jb20iLCJpc3MiOiJBbGV4YVNraWxsS2l0Iiwic3ViIjoiYW16bjEuYXNrLnNraWxsLjUwZWY2ZGYyLWZmYjgtNDY5Mi04ZTE4LWM5YjQ4NWNjMDNiMCIsImV4cCI6MTUyMjcwOTI2OSwiaWF0IjoxNTIyNzA1NjY5LCJuYmYiOjE1MjI3MDU2NjksInByaXZhdGVDbGFpbXMiOnsiY29uc2VudFRva2VuIjpudWxsLCJkZXZpY2VJZCI6ImFtem4xLmFzay5kZXZpY2UuQUZVV05CWjJGU01ERlJKRFdXQTdHU1pRQllYNERCUzUyUlY3Q0hFQ05VVEJDVk1UNldXNVNWTzU2U0xVWjZENlRJSk01SjJTNlhOWEtIQVVVMlJDWFhRS1VJNzVDMzdJT1BWQUE2SENWSzVFNU5WNUVCVkM1WVVGQU1JR0Q0RllaNFhGQTRPRVBETkNKWUNIWE4yUlJHRFFPWllRIiwidXNlcklkIjoiYW16bjEuYXNrLmFjY291bnQuQUc0QkVNR0JKSUpZUkFHS1A1WUxZR0pESVNSSVFWUFdPRUFCRDNPUVc2Nk1UUE9GNEpSSExBRUVUSDVUQklPVDY1MkkzS1VZWlNXQTVNQVo1NUdVVElCTEVNVVE0WVFCUEtYVkc0WVNGSExRTDI3VUVDNllRRFhURVlINU1ENE5NSzRNN1VKNEZXVFJQS1RTSUk0UjczM0VYM1RWQzNVS0xLT0JNSFhYTTVDSE9YMlREVVYyV1BGNk5DV0Y1S0xKRVROR1E1WUM3RU9VREJBIn19.dPbWxnmKZb-KCCDIFayLc7JkuFI1LQGsmHPvHMHAX4dnAwO0PmjGejdl-rlTwjXcIIPIDPT5Y65dIIf0D63SgVIYe2LC0M5alW327UhT5FVjJu8TmtEbiPEoVwKYWqmMbGYi95Zyi5q9XFGRTq6u9idaDALZLT7LjBdY_DQLmks5fSeI819n1AGuxPecwCO29s0GRHg6JNrLVyCsovJIMB0_9yvz_KoOzwXOHp9YfkA9jtOkBWuEjXe1_DKq1HM5VfuAyiTrM1IYmfw9yoctVcH2xCfqL0QmmIYL9TCuh3mTd3yK5S-0NC-uFijeT-Qyg0o6hjmr2v0zfG0NgHQpQA"
+                    "apiAccessToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpJRI6IjEifQ.eyJhdWQiOiJodHRwczovL2FwaS5hbWF6b25hbGV4YS5jb20iLCJpc3MiOiJBbGV4YVNraWxsS2l0Iiwic3ViIjoiYW16bjEuYXNrLnNraWxsLjUwZWY2ZGYyLWZmYjgtNDY5Mi04ZTE4LWM5YjQ4NWNjMDNiMCIsImV4cCI6MTUyMjcwOTI2OSwiaWF0IjoxNTIyNzA1NjY5LCJuYmYiOjE1MjI3MDU2NjksInByaXZhdGVDbGFpbXMiOnsiY29uc2VudFRva2VuIjpudWxsLCJkZXZpY2VJZCI6ImFtem4xLmFzay5kZXZpY2UuQUZVV05CWjJGU01ERlJKRFdXQTdHU1pRQllYNERCUzUyUlY3Q0hFQ05VVEJDVk1UNldXNVNWTzU2U0xVWjZENlRJSk01SjJTNlhOWEtIQVVVMlJDWFhRS1VJNzVDMzdJT1BWQUE2SENWSzVFNU5WNUVCVkM1WVVGQU1JR0Q0RllaNFhGQTRPRVBETkNKWUNIWE4yUlJHRFFPWllRIiwidXNlcklkIjoiYW16bjEuYXNrLmFjY291bnQuQUc0QkVNR0JKSUpZUkFHS1A1WUxZR0pESVNSSVFWUFdPRUFCRDNPUVc2Nk1UUE9GNEpSSExBRUVUSDVUQklPVDY1MkkzS1VZWlNXQTVNQVo1NUdVVElCTEVNVVE0WVFCUEtYVkc0WVNGSExRTDI3VUVDNllRRFhURVlINU1ENE5NSzRNN1VKNEZXVFJQS1RTSUk0UjczM0VYM1RWQzNVS0xLT0JNSFhYTTVDSE9YMlREVVYyV1BGNk5DV0Y1S0xKRVROR1E1WUM3RU9VREJBIn19.dPbWxnmKZb-KCCDIFayLc7JkuFI1LQGsmHPvHMHAX4dnAwO0PmjGejdl-rlTwjXcIIPIDPT5Y65dIIf0D63SgVIYe2LC0M5alW327UhT5FVjJu8TmtEbiPEoVwKYWqmMbGYi95Zyi5q9XFGRTq6u9idaDALZLT7LjBdY_DQLmks5fSeI819n1AGuxPecwCO29s0GRHg6JNrLVyCsovJIMB0_9yvz_KoOzwXOHp9YfkA9jtOkBWuEjXe1_DKq1HM5VfuAyiTrM1IYmfw9yoctVcH2xCfqL0QmmIYL9TCuh3mTd3yK5S-0NC-uFijeT-Qyg0o6hjmr2v0zfG0NgHQpQA"
                 }
             },
 
@@ -288,7 +376,7 @@ function prepareTestRequest(sa, newSession, request){
                 },
                 "attributes": sa,
                 "user": {
-                    "userId": "amzn1.ask.account.AG4BEMGBJIJYRAGKP5YLYGJDISRIQVPWOEABD3OQW66MTPOF4JRHLAEETH5TBIOT652I3KUYZSWA5MAZ55GUTIBLEMUQ4YQBPKXVG4YSFHLQL27UEC6YQDXTEYH5MD4NMK4M7UJ4FWTRPKTSII4R733EX3TVC3UKLKOBMHXXM5CHOX2TDUV2WPF6NCWF5KLJETNGQ5YC7EOUFLO"
+                    "userId": "amzn1.ask.account.AG4BEMGBJIJYRAGKP5YLYGJDISRIQVPWOEABD3OQW66MTPOF4JRHLAEETH5TBIOT652I3KUYZSWA5MAZ33GUTIBLEMUQ4YQBPKXVG4YSFHLQL27UEC6YQDXTEYH5MD4NMK4M7UJ4FWTRPKTSII4R733EX3TVC3UKLKOBMHXXM5CHOX2TDUV2WPF6NCWF5KLJETNGQ5YC7UID" + userIdLast3
                 },
                 "new": newSession
             },
@@ -296,12 +384,12 @@ function prepareTestRequest(sa, newSession, request){
             "version": "1.0"
         };
 
-
     // blocking pause
-    var waitTill = new Date(new Date().getTime() + options.delay * 1000);
+    let waitTill = new Date(new Date().getTime() + options.delay * 1000);
     while(waitTill > new Date()){}
 
-        // console.log(JSON.stringify(eventJSON, null, 2));
+    // console.log(JSON.stringify(eventJSON, null, 2));
+    // console.log('***** request:\n'+ JSON.stringify(request, null, 2));
 
     // call the function
     if (options.stdout) {
@@ -317,14 +405,15 @@ function prepareTestRequest(sa, newSession, request){
 }
 
 function promptForSlot(prompt, slotname, slotvalue, callback) {
+// if line begins with "?" then prompt the user to enter a new slot value or accept default
 
     if (prompt) {
-        process.stdout.write('\x1b[34m' + slotname + ' \x1b[0m\x1b[32m [' + slotvalue + ']\x1b[0m: ');
+        process.stdout.write('  \x1b[34m' + slotname + ' \x1b[0m\x1b[32m [' + slotvalue + ']\x1b[0m: ');
 
         // console.log('\x1b[34m%s :\x1b[0m\x1b[32m %s\x1b[0m ', slotname,  slotvalue  );
 
         process.stdin.once('data', function (data) {
-            var answer = data.toString().trim();
+            let answer = data.toString().trim();
 
             // console.log(answer);
 
@@ -344,7 +433,7 @@ function promptForSlot(prompt, slotname, slotvalue, callback) {
 
     } else {
         if (options.slots) {
-            console.log('\x1b[34m%s :\x1b[0m\x1b[32m %s\x1b[0m ', slotname,  slotvalue  );
+            console.log('  \x1b[34m%s :\x1b[0m\x1b[32m %s\x1b[0m ', slotname,  slotvalue  );
         }
 
         callback(slotvalue);
@@ -370,6 +459,84 @@ function cleanArray(myArray) {
         }
     }
     return cleanedArray;
+}
+function addTime(startDateTime, delta) {
+    let timeOffsetMultiplier = 0;
+    let timeUnit = delta.slice(-1).toUpperCase();
+    let timeTicks = delta.slice(0, -1);
+
+    if (timeUnit == 'M' || timeUnit == 'H' || timeUnit == 'D') {
+
+        if (timeUnit == 'M') {
+            timeOffsetMultiplier = 60 * 1000;
+        }
+        if (timeUnit == 'H') {
+            timeOffsetMultiplier = 60 * 60 * 1000;
+        }
+        if (timeUnit == 'D') {
+            timeOffsetMultiplier = 24 * 60 * 60 * 1000;
+        }
+
+    } else {
+        console.log('invalid time offset.  An example format for 6 hours back is : -6H');
+    }
+
+    let d2 = new Date(startDateTime.getTime() + (timeOffsetMultiplier * timeTicks));
+
+    return d2;
+}
+
+function buildSlotObj(slotname, val) {
+    let obj = '';
+    let slashPos = val.indexOf('/');
+    let ERstatus = '';
+
+    if (!val || val === '') { // empty slot value
+        obj = '"' + slotname + '": {"name":"' + slotname + '"}';
+
+    } else {
+
+        if (slashPos <= 0) {
+            // console.log('***** simple slot');
+            ERstatus = 'SimpleSlot';
+            obj = '"' + slotname + '": {"name":"' + slotname + '","value":"' + val + '"}';
+
+        } else {
+            // console.log('***** ER slot');
+            let heardVal = val.substring(0, slashPos);
+            let resolvedVal = val.substring(slashPos+1, 1000);
+
+            if (resolvedVal === '') {
+                ERstatus = 'ER_SUCCESS_NO_MATCH';
+
+            } else {
+                ERstatus = 'ER_SUCCESS_MATCH';
+
+            }
+            let mockAuthority = "amzn1.er-authority.echo-sdk.amzn1.ask.skill.9eb191fc-6c02-4444-a38a-6e2da4f0000.MySlotType";
+
+            let ERvalues = '';
+            if (ERstatus == 'ER_SUCCESS_MATCH') {
+                ERvalues = ', "values":[{"value":{"name":"' + resolvedVal + '"}}]';
+            }
+
+
+            let resolutions = '"resolutions":{"resolutionsPerAuthority":[{"authority":"' + mockAuthority + '","status":{"code":"' + ERstatus + '"}' + ERvalues + '}]}';
+
+
+            // console.log('***** heardVal: ' + heardVal);
+            // console.log('***** resolvedVal: ' + resolvedVal);
+
+            obj = '"' + slotname + '": {"name":"' + slotname + '","value":"' + heardVal + '", ' + resolutions + ' }';
+
+        }
+
+    }
+
+    // console.log('***** ERstatus: ' + ERstatus);
+
+    return obj;
+
 }
 //
 // const fontcolor = {

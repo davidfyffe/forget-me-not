@@ -5,18 +5,19 @@
 
 const Alexa = require("ask-sdk");
 
-const constants = require('./constants.js');
-const helpers = require('./helpers.js');
+const constants    = require('./constants.js');
+const helpers      = require('./helpers.js');
+const customhelpers = require('./customhelpers.js');
 const interceptors = require('./interceptors.js');
 
+const AWS = constants.AWS;
+const DYNAMODB_TABLE = constants.DYNAMODB_TABLE;
 
-let AWS = require('aws-sdk');
-AWS.config.region = process.env.AWS_REGION || 'us-east-1';
+// let AWS = require('aws-sdk');
+// AWS.config.region = process.env.AWS_REGION || 'us-east-1';
 
 
 const invocationName = "forget me not";
-
-const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE || 'askMemorySkillTable';
 
 
 const LaunchHandler = {
@@ -34,6 +35,10 @@ const LaunchHandler = {
         const launchCount = sessionAttributes['launchCount'];
         const lastUseTimestamp = sessionAttributes['lastUseTimestamp'];
 
+        const joinRank = '3'; // sessionAttributes['joinRank'];
+        const skillUserCount = sessionAttributes['skillUserCount'];
+
+
         const thisTimeStamp = new Date(handlerInput.requestEnvelope.request.timestamp).getTime();
         // console.log('thisTimeStamp: ' + thisTimeStamp);
 
@@ -41,12 +46,14 @@ const LaunchHandler = {
 
         let say = '';
         if (launchCount == 1) {
-            say = 'welcome new user! ';
+            say = 'welcome new user! '
+                + ' You are the <say-as interpret-as="cardinal">' + joinRank + '</say-as> user to join!';
         } else {
 
             say = 'Welcome back! This is session ' + launchCount
                 + ' and it has been ' + span.timeSpanDesc
-                + '. ';
+                + '. There are now ' + skillUserCount + ' skill users. '
+                + ' You joined as the <say-as interpret-as="cardinal">' + joinRank + '</say-as> user.';
         }
 
         const responseBuilder = handlerInput.responseBuilder;
@@ -78,6 +85,10 @@ const LaunchHandler = {
         }
         const welcomeCardImg = constants.getWelcomeCardImg();
 
+
+
+
+        // without Promise call:
         return handlerInput.responseBuilder
             .speak(say)
             .reprompt(say)
@@ -85,6 +96,8 @@ const LaunchHandler = {
                 'Hello!\nThis is a card for your skill, ' + helpers.capitalize(invocationName),
                 welcomeCardImg.smallImageUrl, welcomeCardImg.largeImageUrl)
             .getResponse();
+
+
 
     }
 };
@@ -119,25 +132,133 @@ const LaunchHandler = {
 //     }
 // };
 
-const MyColorIsHandler = {
+const MyColorSetHandler = {
     canHandle(handlerInput) {
         return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-            && handlerInput.requestEnvelope.request.intent.name === 'MyColorIsIntent';
+            && handlerInput.requestEnvelope.request.intent.name === 'MyColorSetIntent';
     },
 
     handle(handlerInput) {
-        const color = handlerInput.requestEnvelope.request.intent.slots.color.value;
+
+        const request = handlerInput.requestEnvelope.request;
+        let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+
+        let say = '';
+
+        let slotStatus = '';
+        let resolvedSlot;
+
+        let slotValues = helpers.getSlotValues(request.intent.slots);
+        // getSlotValues returns .heardAs, .resolved, and .isValidated for each slot, according to request slot status codes ER_SUCCESS_MATCH, ER_SUCCESS_NO_MATCH, or traditional simple request slot without resolutions
+
+        // console.log('***** slotValues: ' +  JSON.stringify(slotValues, null, 2));
+        //   SLOT: color
+        if (slotValues.color.heardAs) {
+            slotStatus += ' I heard you say color, ' + slotValues.color.heardAs + '. ';
+        } else {
+            slotStatus += 'I didn\'t catch your color.  Can you repeat? ';
+        }
+
+        if (slotValues.color.ERstatus === 'ER_SUCCESS_MATCH') {
+            slotStatus += 'a valid ';
+            if(slotValues.color.resolved !== slotValues.color.heardAs) {
+                slotStatus += 'synonym for ' + slotValues.color.resolved + '. ';
+            } else {
+                slotStatus += 'match. '
+            } // else {
+            //
+        }
+        if (slotValues.color.ERstatus === 'ER_SUCCESS_NO_MATCH') {
+            slotStatus += 'which did not match any slot value. ';
+            console.log('***** consider adding "' + slotValues.color.heardAs + '" to the custom slot type used by slot color! ');
+        }
+
+        if( (slotValues.color.ERstatus === 'ER_SUCCESS_NO_MATCH') ||  (!slotValues.color.heardAs) ) {
+            slotStatus += 'A few valid values are, '
+                // + 'red, blue, or green. ';
+                + helpers.sayArray(helpers.getExampleSlotValues('MyColorSetIntent','color'), 'or');
+
+        }
+
+        say += slotStatus;
+
+        sessionAttributes['favoriteColor'] = slotValues.color.resolved || slotValues.color.heardAs;
+
+
+        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+        return handlerInput.responseBuilder
+            .speak(say)
+            .reprompt(say)
+            .getResponse();
+
+    }
+};
+const MyColorGetHandler = {
+    canHandle(handlerInput) {
+        return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+            && handlerInput.requestEnvelope.request.intent.name === 'MyColorGetIntent';
+    },
+    handle(handlerInput) {
+
+        let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+
+        let color = sessionAttributes['favoriteColor'];
+        let say = '';
+        if (color) {
+            say += 'Your favorite color is  ' + color + '. ';
+        } else {
+            say += 'You don\'t have a favorite color yet. ';
+        }
+
+        return new Promise((resolve) => {
+            customhelpers.getColorSummary(recordCount=>{
+                // say += 'Records found, ' + recordCount + '.';
+
+                resolve(handlerInput.responseBuilder
+                    .speak(say)
+                    .reprompt('Try again. ' + say)
+                    .getResponse()
+                );
+            });
+        });
+
+
+
+
+        // say += 'You can set your color by saying, for example, my favorite color is, blue. ';
+        //
+        // return handlerInput.responseBuilder
+        //     .speak(say)
+        //     .reprompt('Try again. ' + say)
+        //     .getResponse();
+    }
+};
+const SpeakSpeedHandler = {
+    canHandle(handlerInput) {
+        return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+            && handlerInput.requestEnvelope.request.intent.name === 'SpeakSpeedIntent';
+    },
+
+    handle(handlerInput) {
+        const speakingSpeedChange = handlerInput.requestEnvelope.request.intent.slots.speakingSpeedChange.value;
         let say;
 
-        if(typeof color == 'undefined') {
-            say = "Sorry, I didn't catch your favorite color. ";
+        if(typeof speakingSpeedChange === 'undefined') {
+            say = "Sorry, I didn't catch your speak speed.  Say, speak faster, or, speak slower. ";
 
         } else {
-            say = "Wow, I like " + color + " too!";
-            const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-            sessionAttributes['favoriteColor'] = color;
 
-            handlerInput.attributesManager.setPersistentAttributes(sessionAttributes);
+            const sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
+
+            let newSpeed = helpers.changeProsody('rate',sessionAttributes['speakingSpeed'],speakingSpeedChange);
+
+            sessionAttributes['speakingSpeed'] = newSpeed;
+            say = "Okay, I will speak " + speakingSpeedChange + " now!";
+
+            handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+            // handlerInput.attributesManager.setPersistentAttributes(sessionAttributes);
             // handlerInput.attributesManager.savePersistentAttributes();  // already saving in ResponseInterceptor
         }
         return handlerInput.responseBuilder
@@ -170,7 +291,7 @@ const BookmarkSetHandler = {
         let page = {};
 
         //   SLOT: page
-        if (request.intent.slots.page && request.intent.slots.page.value) {
+        if (request.intent.slots.page && request.intent.slots.page.value && request.intent.slots.page.value !== '?') {
             page = request.intent.slots.page.value;
             slotStatus += ' slot page was heard as ' + page + '. ';
             sessionAttributes['bookmark'] = page;
@@ -197,7 +318,6 @@ const BookmarkGetHandler = {
     },
     handle(handlerInput) {
 
-        const request = handlerInput.requestEnvelope.request;
 
         let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
 
@@ -259,7 +379,7 @@ const MyPhoneNumberHandler = {
             Message: bodyText
         };
 
-        handlerInput.attributesManager.setPersistentAttributes(sessionAttributes);
+        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
         return new Promise((resolve) => {
             helpers.sendTxtMessage(params, request.locale, myResult=>{
@@ -295,7 +415,6 @@ const GetNewFactHandler = {
 
         const facts = constants.getFacts();
 
-
         if (factHistory.length === 0) {  // first time
 
             fact = helpers.randomArrayElement(facts);
@@ -306,7 +425,7 @@ const GetNewFactHandler = {
 
             let availableFacts = facts.diff(factHistory);
             fact = helpers.randomArrayElement(availableFacts);
-            console.log('fact ' + fact);
+
             factHistory.push(fact);
 
             const DontRepeatLastN = constants.getDontRepeatLastN();
@@ -316,13 +435,14 @@ const GetNewFactHandler = {
             }
 
         }
-        handlerInput.attributesManager.setPersistentAttributes(sessionAttributes);
+        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-        say = 'Here is your fact, ' + fact;
+        say = '<say-as interpret-as="interjection">beep beep</say-as> Here is your fact, ' + fact;
 
         return handlerInput.responseBuilder
             .speak(say)
             .reprompt('Try again. ' + say)
+            .withSimpleCard('card title', helpers.stripTags(say))
             .getResponse();
     }
 };
@@ -383,7 +503,7 @@ const HelpHandler = {
             say += 'Your last intent was ' + history[history.length-2].IntentRequest + '. ';
             // prepare context-sensitive help messages here
         }
-        say += 'You can say things like, set a bookmark, or, my favorite color is, or reset profile. ';
+        say += 'You can say things like, set a bookmark, speak faster or slower, my favorite color is blue, or, reset profile. ';
 
         return handlerInput.responseBuilder
             .speak(say)
@@ -481,8 +601,6 @@ const NoHandler = {
 
         }
 
-
-
         let say = '';
 
         return handlerInput.responseBuilder
@@ -524,139 +642,33 @@ const UnhandledHandler = {
     }
 };
 
-const RequestPersistenceInterceptor = {
-    process(handlerInput) {
-        if(handlerInput.requestEnvelope.session['new']) {
+const ErrorHandler = {
+    canHandle() {
+        return true;
+    },
+    handle(handlerInput, error) {
+        console.log(`Error handled: ${error.message}`);
 
-            return new Promise((resolve, reject) => {
-
-                handlerInput.attributesManager.getPersistentAttributes()
-
-                    .then((sessionAttributes) => {
-                        sessionAttributes = sessionAttributes || {};
-
-                        // console.log(JSON.stringify(sessionAttributes, null, 2));
-
-                        if(Object.keys(sessionAttributes).length === 0) {
-                            console.log('--- First Ever Visit for userId ' + handlerInput.requestEnvelope.session.user.userId);
-
-                            const initialAttributes = constants.getMemoryAttributes();
-                            sessionAttributes = initialAttributes;
-
-                        }
-
-                        sessionAttributes['launchCount'] += 1;
-                        // sessionAttributes['tempPassPhrase'] = generatePassPhrase().word1 + '-' + generatePassPhrase().word2 + '-' + generatePassPhrase().number;
-
-                        handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
-
-                        handlerInput.attributesManager.savePersistentAttributes()
-                            .then(() => {
-                                resolve();
-                            })
-                            .catch((err) => {
-                                reject(err);
-                            });
-
-                    });
-
-            });
-
-        } // end session['new']
-
-
-    }
-};
-
-const RequestHistoryInterceptor = {
-    process(handlerInput) {
-
-
-        const maxHistorySize = constants.getMaxHistorySize();  // number of intent/request events to store
-
-        const thisRequest = handlerInput.requestEnvelope.request;
-        let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-        let history = sessionAttributes['history'];
-
-        let IntentRequest = {};
-        if (thisRequest.type === 'IntentRequest' ) {
-
-            let slots = {};
-
-            IntentRequest = {
-                'IntentRequest' : thisRequest.intent.name
-            };
-
-            if (thisRequest.intent.slots) {
-
-                for (let slot in thisRequest.intent.slots) {
-                    slots[slot] = thisRequest.intent.slots[slot].value;
-                }
-
-                IntentRequest = {
-                    'IntentRequest' : thisRequest.intent.name,
-                    'slots' : slots
-                };
-
-            }
-
-        } else {
-            IntentRequest = {'IntentRequest' : thisRequest.type};
-        }
-
-        if(history.length >= maxHistorySize) {
-            history.shift();
-        }
-        history.push(IntentRequest);
-
-        handlerInput.attributesManager.setPersistentAttributes(sessionAttributes);
-
-    }
-
-};
-
-const ResponsePersistenceInterceptor = {
-    process(handlerInput, responseOutput) {
-
-        const ses = (typeof responseOutput.shouldEndSession == "undefined" ? true : responseOutput.shouldEndSession);
-
-        if(ses || handlerInput.requestEnvelope.request.type == 'SessionEndedRequest') { // skill was stopped or timed out
-
-            let sessionAttributes = handlerInput.attributesManager.getSessionAttributes();
-
-            sessionAttributes['lastUseTimestamp'] = new Date(handlerInput.requestEnvelope.request.timestamp).getTime();
-
-            handlerInput.attributesManager.setPersistentAttributes(sessionAttributes);
-
-            return new Promise((resolve, reject) => {
-                handlerInput.attributesManager.savePersistentAttributes()
-                    .then(() => {
-                        resolve();
-                    })
-                    .catch((err) => {
-                        reject(err);
-                    });
-
-            });
-
-        }
-
-    }
+        return handlerInput.responseBuilder
+            .speak('Sorry, an error occurred.')
+            .reprompt('Sorry, an error occurred.')
+            .getResponse();
+    },
 };
 
 
 const skillBuilder = Alexa.SkillBuilders.standard();
 
-
 exports.handler = skillBuilder
     .addRequestHandlers(
         LaunchHandler,
-        MyColorIsHandler,
+        MyColorSetHandler,
+        MyColorGetHandler,
         BookmarkSetHandler,
         BookmarkGetHandler,
         MyPhoneNumberHandler,
         GetNewFactHandler,
+        SpeakSpeedHandler,
         ResetHandler,
         HelpHandler,
         ExitHandler,
@@ -664,45 +676,31 @@ exports.handler = skillBuilder
         NoHandler,
         UnhandledHandler
     )
-    .addRequestInterceptors(RequestPersistenceInterceptor)
-    .addRequestInterceptors(RequestHistoryInterceptor)
-    .addResponseInterceptors(ResponsePersistenceInterceptor)
+    .addErrorHandlers(ErrorHandler)
+    .addRequestInterceptors(interceptors.RequestPersistenceInterceptor)
+    .addRequestInterceptors(interceptors.RequestHistoryInterceptor)
+    .addRequestInterceptors(interceptors.RequestJoinRankInterceptor)
+
+    .addResponseInterceptors(interceptors.ResponsePersistenceInterceptor)
+    .addResponseInterceptors(interceptors.SpeechOutputInterceptor)
+
 
     .withTableName(DYNAMODB_TABLE)
     .withAutoCreateTable(true)
 
     // .withPartitionKeyGenerator(PartitionKeyGenerators.userId or deviceId (define values stored in "id" column)
     // .withPartitionKeyName('myKeyName') // override default primary key name "id"
-    // .withDynamoDbClient
+    // .withDynamoDbClient(constants.localDynamoClient)
 
     .lambda();
 
 //------------------------------------------------------------------------------
 // Helper Functions
 
-Array.prototype.diff = function(a) {
-    return this.filter(function(i) {return a.indexOf(i) < 0;});
-};
-
-
-// const welcomeCardImg = {
-//     smallImageUrl: "https://s3.amazonaws.com/skill-images-789/cards/card_plane720_480.png",
-//     largeImageUrl: "https://s3.amazonaws.com/skill-images-789/cards/card_plane1200_800.png"
-//
-// };
-//
-// const DisplayImg1 = {
-//     title: 'Jet Plane',
-//     url: 'https://s3.amazonaws.com/skill-images-789/display/plane340_340.png'
-// };
-//
-// const DisplayImg2 = {
-//     title: 'Starry Sky',
-//     url: 'https://s3.amazonaws.com/skill-images-789/display/background1024_600.png'
-//
+// Array.prototype.diff = function(a) {
+//     return this.filter(function(i) {return a.indexOf(i) < 0;});
 // };
 
 
 
-
-
+// End of Skill code -------------------------------------------------------------
