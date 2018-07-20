@@ -60,3 +60,10 @@ When a skill is stopped (or times out), a response interceptor will save session
 1. In the Endpoint tab, click AWS Lambda ARN and click into the Default Region box.
 1. Paste in the Lambda ARN recorded above, and click SAVE and then rebuild your skill.
 1. Test your skill by saying "alexa, open forget me not".
+
+
+### Using Alexa Skills Kit Command Line Interface (ASK CLI) to deploy
+1. Install and configure ASK CLI
+1. Clone this repository.
+1. In a command prompt run ```ask deploy```
+1. Attach an IAM role with AmazonDynamoDBFullAccess to the created lambda. (ASK CLI will create the AWS Lambda function with an IAM role named ask-lambda-forget-me-not, attached to the basic execution policy only!)

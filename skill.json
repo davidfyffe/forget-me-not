@@ -1,0 +1,30 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "summary": "Saves information to Dynamo and session variables",
+          "examplePhrases": [
+            "set a bookmark for page 123",
+            "what is my bookmark",
+            "tell me a fact"
+          ],
+          "name": "forget-me-not",
+          "description": "This is an Alexa skill sample showing Persistent memory.  Persistent memory is long term memory. \nWhen the user relaunches skill, after five minutes or five weeks, the skill recalls and leverages past interactions to provide a more personalized experience."
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Sample Testing Instructions.",
+      "category": "EDUCATION_AND_REFERENCE",
+      "distributionCountries": []
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "sourceDir": "lambda/custom"
+        }
+      }
+    },
+    "manifestVersion": "1.0"
+  }
+}
