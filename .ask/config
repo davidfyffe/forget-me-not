@@ -1,10 +1,10 @@
 {
   "deploy_settings": {
     "default": {
-      "skill_id": "",
+      "skill_id": "amzn1.ask.skill.4bca85aa-f479-49cd-8c6e-2339eb47763a",
       "was_cloned": false,
       "merge": {
-        "skillManifest": {
+        "manifest": {
           "apis": {
             "custom": {
               "endpoint": {
@@ -13,6 +13,27 @@
             }
           }
         }
+      },
+      "resources": {
+        "manifest": {
+          "eTag": "ff04f545b208f19458c4a50e2edaec2e"
+        },
+        "interactionModel": {
+          "en-US": {
+            "eTag": "af0d8c2965fdfc343a2f82567a2d251f"
+          }
+        },
+        "lambda": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:638166708680:function:forget-me-not-default",
+            "functionName": "arn:aws:lambda:us-east-1:638166708680:function:forget-me-not-default",
+            "awsRegion": "us-east-1",
+            "alexaUsage": [
+              "custom/default"
+            ],
+            "revisionId": "91c30c37-5547-4d9b-aca7-859fa1998395"
+          }
+        ]
       }
     }
   }
